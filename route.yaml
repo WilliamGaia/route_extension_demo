@@ -1,0 +1,14 @@
+    name: route-ext
+    forwardingRules:
+    - https://www.googleapis.com/compute/v1/projects/williamlab/regions/asia-east1/forwardingRules/service-ext-lb-forwarding-rule
+    loadBalancingScheme: EXTERNAL_MANAGED
+    extensionChains:
+    - name: "chain1"
+      matchCondition:
+        celExpression: request.headers['content-type'] == 'application/json; charset=UTF-8' && request.headers['referer'].contains('/') && request.headers['x-requested-with'] == 'XMLHttpRequests' && request.headers['user-agent'].contains('Mac OS X')
+      extensions:
+      - name: 'ext11'
+        authority: ext11.com
+        service: https://www.googleapis.com/compute/v1/projects/williamlab/regions/asia-east1/backendServices/l7-ilb-callout-service
+        failOpen: false
+        timeout: 1s

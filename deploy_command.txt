@@ -1,0 +1,46 @@
+gcloud compute instances create-with-container callouts-vm \
+    --container-image=us-docker.pkg.dev/service-extensions/ext-proc/ext-proc-sample-python:latest \
+    --network=mssql-stresstest \
+    --subnet=db01-sub \
+    --zone=asia-east1-b \
+    --tags=allow-ssh,load-balanced-backend
+
+gcloud compute instances create-with-container callouts-vm2 \
+    --container-image=asia-east1-docker.pkg.dev/williamlab/service-extension-demo/extension-server:latest \
+    --network=mssql-stresstest \
+    --subnet=db01-sub \
+    --zone=asia-east1-b \
+    --tags=allow-ssh,load-balanced-backend
+
+gcloud compute instance-groups unmanaged create callouts-ig \
+    --zone=asia-east1-b
+
+gcloud compute instance-groups unmanaged set-named-ports callouts-ig \
+    --named-ports=http:80,grpc:443 \
+    --zone=asia-east1-b
+
+gcloud compute instance-groups unmanaged add-instances callouts-ig \
+    --zone=asia-east1-b \
+    --instances=callouts-vm
+
+gcloud compute health-checks create http callouts-hc \
+    --region=asia-east1 \
+    --port=80
+
+gcloud compute backend-services create l7-ilb-callout-service \
+    --load-balancing-scheme=EXTERNAL_MANAGED \
+    --protocol=HTTP2 \
+    --port-name=grpc \
+    --health-checks=callouts-hc \
+    --health-checks-region=asia-east1 \
+    --region=asia-east1
+
+gcloud compute backend-services add-backend l7-ilb-callout-service \
+    --balancing-mode=UTILIZATION \
+    --instance-group=callouts-ig \
+    --instance-group-zone=asia-east1-b \
+    --region=asia-east1
+
+gcloud beta service-extensions lb-route-extensions import route-ext \
+    --source=route.yaml \
+    --location=asia-east1
